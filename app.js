@@ -256,7 +256,7 @@
     card.className = "event";
     const map = event.map && adventure.mapDataUrl ? `<img class="event__map" src="${adventure.mapDataUrl}" alt="Äventyrskarta" />` : "";
     const letter = event.letter ? `<span class="event__letter">${escapeHtml(event.letter)}</span>` : "";
-    card.innerHTML = `<div class="event__koko">🐒</div><h1>${escapeHtml(event.title)}</h1><p>${escapeHtml(event.message)}</p>${letter}${map}`;
+    card.innerHTML = `<div class="event__koko"><img src="assets/koko.jpg" alt="Apan Koko, en piratapa med ögonlapp" /></div><h1>${escapeHtml(event.title)}</h1><p>${escapeHtml(event.message)}</p>${letter}${map}`;
     if (event.type === "password") {
       screen.querySelector(".tap-zone").style.pointerEvents = "none";
       createPasswordGame(card, adventure);
