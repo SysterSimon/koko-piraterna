@@ -264,13 +264,19 @@
     const events = createEvents(adventure);
     let eventIndex = -1;
     let taps = 0;
+    let tapWindowStartedAt = 0;
     app.innerHTML = `<section class="play-screen" id="play-screen"><div class="tap-zone" aria-label="Tryck här för nästa del"></div></section>`;
     const screen = document.querySelector("#play-screen");
     const zone = screen.querySelector(".tap-zone");
     zone.addEventListener("click", () => {
       if (eventIndex >= events.length - 1) return;
+      const now = Date.now();
+      if (!tapWindowStartedAt || now - tapWindowStartedAt > 3000) {
+        taps = 0;
+        tapWindowStartedAt = now;
+      }
       taps += 1;
-      if (taps === 4) { taps = 0; eventIndex += 1; showEvent(screen, events[eventIndex], adventure); }
+      if (taps === 4) { taps = 0; tapWindowStartedAt = 0; eventIndex += 1; showEvent(screen, events[eventIndex], adventure); }
       else updateProgress(screen, taps);
     });
   }
@@ -353,8 +359,7 @@
     return result;
   }
 
-  if (new URLSearchParams(location.search).has("setup") || !loadAdventure()) renderSetup();
-  else renderPlay(loadAdventure());
+  renderSetup(loadAdventure() || defaults);
 
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
