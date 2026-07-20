@@ -4,6 +4,7 @@
   const STORAGE_KEY = "koko-piraterna-adventure-v1";
   const app = document.querySelector("#app");
   let sessionAdventure = null;
+  let audioContext = null;
 
   const defaults = {
     introMessage: "Ahoy, modiga pirater! Apan Koko har försvunnit. Följ kartan och klara uppdragen för att hitta honom och skatten!",
@@ -224,6 +225,41 @@
     return events;
   }
 
+  function getAudioContext() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return null;
+    audioContext ||= new AudioContext();
+    if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+    return audioContext;
+  }
+
+  function playTone(context, frequency, start, duration, volume, type = "sine") {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, start);
+    gain.gain.setValueAtTime(0.001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + 0.018);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.03);
+  }
+
+  function playMagicSound() {
+    const context = getAudioContext();
+    if (!context) return;
+    const now = context.currentTime + 0.02;
+    [523.25, 659.25, 783.99].forEach((frequency, index) => playTone(context, frequency, now + index * 0.085, 0.25, 0.045));
+  }
+
+  function playFanfare() {
+    const context = getAudioContext();
+    if (!context) return;
+    const now = context.currentTime + 0.02;
+    [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => playTone(context, frequency, now + index * 0.12, index === 3 ? 0.56 : 0.2, 0.07, "triangle"));
+  }
+
   function renderPlay(adventure) {
     const events = createEvents(adventure);
     let eventIndex = -1;
@@ -252,11 +288,12 @@
   function showEvent(screen, event, adventure) {
     screen.querySelector(".event")?.remove();
     screen.querySelector(".tap-marker")?.remove();
+    playMagicSound();
     const card = document.createElement("article");
     card.className = "event";
     const map = event.map && adventure.mapDataUrl ? `<img class="event__map" src="${adventure.mapDataUrl}" alt="Äventyrskarta" />` : "";
     const letter = event.letter ? `<span class="event__letter">${escapeHtml(event.letter)}</span>` : "";
-    card.innerHTML = `<div class="event__koko"><img src="assets/koko.jpg" alt="Apan Koko, en piratapa med ögonlapp" /></div><h1>${escapeHtml(event.title)}</h1><p>${escapeHtml(event.message)}</p>${letter}${map}`;
+    card.innerHTML = `<div class="event__koko"><img src="assets/koko-cartoon.png" alt="Den tecknade piratapan Koko med ögonlapp" /></div><h1>${escapeHtml(event.title)}</h1><p>${escapeHtml(event.message)}</p>${letter}${map}`;
     if (event.type === "password") {
       screen.querySelector(".tap-zone").style.pointerEvents = "none";
       createPasswordGame(card, adventure);
@@ -269,6 +306,7 @@
     let shuffled = shuffle(letters);
     for (let attempt = 0; attempt < 12 && normalize(shuffled.join("")) === adventure.password; attempt += 1) shuffled = shuffle(letters);
     let selected = null;
+    let solved = false;
     const game = document.createElement("section");
     game.className = "password";
     game.innerHTML = `<div class="password__tiles"></div><p class="password__status">Tryck på två bokstäver för att byta plats.</p>`;
@@ -288,6 +326,8 @@
           selected = null;
           draw();
           if (normalize(shuffled.join("")) === adventure.password) {
+            if (!solved) playFanfare();
+            solved = true;
             status.innerHTML = `<span class="treasure">Rätt lösenord!</span><br>${escapeHtml(adventure.finalClue)}`;
           }
         });
@@ -296,6 +336,8 @@
     };
     draw();
     if (normalize(shuffled.join("")) === adventure.password) {
+      if (!solved) playFanfare();
+      solved = true;
       status.innerHTML = `<span class="treasure">Rätt lösenord!</span><br>${escapeHtml(adventure.finalClue)}`;
     }
     card.append(game);
