@@ -1,5 +1,5 @@
-const CACHE = "koko-piraterna-v4";
-const ASSETS = ["./", "./index.html", "./styles.css?v=4", "./app.js?v=4", "./manifest.webmanifest?v=4", "./assets/koko-cartoon.jpg"];
+const CACHE = "koko-piraterna-v5";
+const ASSETS = ["./", "./index.html", "./styles.css?v=5", "./app.js?v=5", "./manifest.webmanifest?v=5", "./assets/koko-cartoon.jpg"];
 
 self.addEventListener("install", (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())));
 self.addEventListener("activate", (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim())));
