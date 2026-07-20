@@ -124,7 +124,17 @@ textarea { min-height: 92px; resize: vertical; }
 
 @keyframes unroll { from { transform: translateY(-12px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
 
-.event__koko { font-size: 4rem; line-height: 1; margin-bottom: 8px; }
+.event__koko {
+  width: 92px;
+  height: 92px;
+  margin: -4px auto 10px;
+  overflow: hidden;
+  border: 3px solid #8a5b25;
+  border-radius: 50%;
+  background: #795130;
+  box-shadow: 0 2px 0 rgba(255,255,255,.3);
+}
+.event__koko img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 37%; }
 .event h1 { margin: 0 0 14px; color: #17394a; font-size: clamp(1.7rem, 8vw, 2.6rem); }
 .event p { white-space: pre-wrap; font-size: clamp(1.1rem, 4.8vw, 1.35rem); line-height: 1.48; margin: 0 0 16px; }
 .event__letter { display: inline-flex; align-items: center; justify-content: center; min-width: 1.7em; height: 1.7em; margin: 2px; background: var(--coral); border: 2px solid #9c483a; border-radius: 50%; color: #fff9e9; font: bold 2.4rem/1 system-ui, sans-serif; }
