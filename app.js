@@ -115,14 +115,14 @@
     el.innerHTML = `
       <div class="row"><h3>Station <span class="station-number">${index + 1}</span></h3><button class="small-button remove-station" type="button" aria-label="Ta bort station">Ta bort</button></div>
       <label>Instruktion<textarea class="station-instruction" required placeholder="Vad ska piraterna göra?">${escapeHtml(station.instruction)}</textarea></label>
-      <label>Bokstav till lösenordet<input class="station-letter" required maxlength="1" value="${escapeHtml(station.letter)}" placeholder="K" /></label>`;
+      <label>Bokstäver till lösenordet (1–4)<input class="station-letter" required maxlength="4" value="${escapeHtml(station.letter)}" placeholder="K O" /></label>`;
     el.querySelector(".remove-station").addEventListener("click", () => {
       if (list.children.length === 1) return;
       el.remove();
       [...list.children].forEach((card, i) => { card.querySelector(".station-number").textContent = i + 1; });
     });
     el.querySelector(".station-letter").addEventListener("input", (event) => {
-      event.target.value = normalize(event.target.value).slice(0, 1);
+      event.target.value = normalize(event.target.value).slice(0, 4);
     });
     list.append(el);
   }
@@ -133,7 +133,7 @@
     const build = (mapDataUrl) => {
       const stations = [...document.querySelectorAll(".station-card")].map((card) => ({
         instruction: card.querySelector(".station-instruction").value.trim(),
-        letter: normalize(card.querySelector(".station-letter").value).slice(0, 1)
+        letter: normalize(card.querySelector(".station-letter").value).slice(0, 4)
       }));
       const password = normalize(document.querySelector("#password").value);
       if (!stations.every((station) => station.instruction && station.letter)) return alert("Fyll i instruktion och en bokstav för varje station.");
@@ -201,10 +201,10 @@
     if (!value || typeof value !== "object" || !Array.isArray(value.stations)) throw new Error("Invalid adventure");
     const stations = value.stations.map((station) => ({
       instruction: String(station.instruction || "").trim(),
-      letter: normalize(station.letter).slice(0, 1)
+      letter: normalize(station.letter).slice(0, 4)
     }));
     const password = normalize(value.password);
-    const letters = stations.map((station) => station.letter).sort().join("");
+    const letters = stations.map((station) => station.letter).join("").split("").sort().join("");
     if (!stations.length || !stations.every((station) => station.instruction && station.letter) || !value.mapDataUrl || letters !== password.split("").sort().join("")) throw new Error("Invalid adventure");
     return {
       introMessage: String(value.introMessage || "").trim(),
@@ -298,8 +298,8 @@
     const card = document.createElement("article");
     card.className = "event";
     const map = event.map && adventure.mapDataUrl ? `<img class="event__map" src="${adventure.mapDataUrl}" alt="Äventyrskarta" />` : "";
-    const letter = event.letter ? `<span class="event__letter">${escapeHtml(event.letter)}</span>` : "";
-    card.innerHTML = `<div class="event__koko"><img src="assets/koko-cartoon.jpg" alt="Den tecknade piratapan Koko med ögonlapp" /></div><h1>${escapeHtml(event.title)}</h1><p>${escapeHtml(event.message)}</p>${letter}${map}`;
+    const letters = event.letter ? [...event.letter].map((letter) => `<span class="event__letter">${escapeHtml(letter)}</span>`).join("") : "";
+    card.innerHTML = `<div class="event__koko"><img src="assets/koko-cartoon.jpg" alt="Den tecknade piratapan Koko med ögonlapp" /></div><h1>${escapeHtml(event.title)}</h1><p>${escapeHtml(event.message)}</p>${letters}${map}`;
     if (event.type === "password") {
       screen.querySelector(".tap-zone").style.pointerEvents = "none";
       createPasswordGame(card, adventure);
@@ -308,7 +308,7 @@
   }
 
   function createPasswordGame(card, adventure) {
-    const letters = adventure.stations.map((station) => station.letter);
+    const letters = adventure.stations.flatMap((station) => [...station.letter]);
     let shuffled = shuffle(letters);
     for (let attempt = 0; attempt < 12 && normalize(shuffled.join("")) === adventure.password; attempt += 1) shuffled = shuffle(letters);
     let selected = null;
