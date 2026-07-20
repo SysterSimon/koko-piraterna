@@ -2,18 +2,20 @@
   "use strict";
 
   const STORAGE_KEY = "koko-piraterna-adventure-v1";
+  const DEFAULT_ENCOURAGEMENT = "Det här klarade ni galant, pirater! Följ kartan vidare till nästa station.";
+  const DEFAULT_FINAL_ENCOURAGEMENT = "Det här klarade ni galant, pirater! Nu har ni alla bokstäver och kan försöka öppna skattens sista ledtråd.";
   const app = document.querySelector("#app");
   let sessionAdventure = null;
   let audioContext = null;
 
   const defaults = {
     introMessage: "Ahoy, modiga pirater! Apan Koko har försvunnit. Följ kartan och klara uppdragen för att hitta honom och skatten!",
-    mapDataUrl: "",
+    mapDataUrl: "assets/hulugarden-piratkarta.jpg",
     stations: [
-      { instruction: "Bygg en stadig bro över floden av pinnar och grenar.", letter: "K" },
-      { instruction: "Fäll piratstockarna genom att kasta mjuka bollar eller kottar.", letter: "O" },
-      { instruction: "Jaga bort krokodilen genom att träffa stocken med kottar.", letter: "K" },
-      { instruction: "Leta efter Kokos gömda bana och lös sista uppdraget.", letter: "O" }
+      { instruction: "Bygg en stadig bro över floden av pinnar och grenar.", letter: "K", encouragement: DEFAULT_ENCOURAGEMENT },
+      { instruction: "Fäll piratstockarna genom att kasta mjuka bollar eller kottar.", letter: "O", encouragement: DEFAULT_ENCOURAGEMENT },
+      { instruction: "Jaga bort krokodilen genom att träffa stocken med kottar.", letter: "K", encouragement: DEFAULT_ENCOURAGEMENT },
+      { instruction: "Leta efter Kokos gömda bana och lös sista uppdraget.", letter: "O", encouragement: DEFAULT_FINAL_ENCOURAGEMENT }
     ],
     password: "KOKO",
     finalClue: "Ni klarade det! Skatten finns gömd: ________________________________"
@@ -65,7 +67,8 @@
             <textarea id="intro" required>${escapeHtml(adventure.introMessage)}</textarea>
             <label for="map">Äventyrskarta (PNG eller JPEG)</label>
             <input id="map" type="file" accept="image/png,image/jpeg" />
-            <p class="hint" id="map-status">${adventure.mapDataUrl ? "Karta inlagd. Välj en ny fil om du vill byta den." : "Kartbilden visas med första meddelandet och efter varje avklarad station."}</p>
+            <div class="button-row"><button class="button button--secondary" type="button" id="use-default-map">Använd Hulugårdens piratkarta</button></div>
+            <p class="hint" id="map-status">${adventure.mapDataUrl === "assets/hulugarden-piratkarta.jpg" ? "Hulugårdens piratkarta är vald. Välj en ny fil om du vill byta den." : adventure.mapDataUrl ? "Karta inlagd. Välj en ny fil om du vill byta den." : "Kartbilden visas med första meddelandet och efter varje avklarad station."}</p>
           </section>
           <section class="setup-card">
             <h2>Stationer</h2>
@@ -95,6 +98,10 @@
     renderStationFields(adventure.stations);
     document.querySelector("#add-station").addEventListener("click", () => addStationField());
     document.querySelector("#reset-defaults").addEventListener("click", () => renderSetup(structuredClone(defaults)));
+    document.querySelector("#use-default-map").addEventListener("click", () => {
+      document.querySelector("#map").dataset.mapUrl = "assets/hulugarden-piratkarta.jpg";
+      document.querySelector("#map-status").textContent = "Hulugårdens piratkarta är vald och används när du sparar.";
+    });
     document.querySelector("#export-adventure").addEventListener("click", exportAdventure);
     document.querySelector("#import-adventure").addEventListener("click", () => document.querySelector("#import-file").click());
     document.querySelector("#import-file").addEventListener("change", importAdventure);
@@ -107,7 +114,7 @@
     stations.forEach((station, index) => addStationField(station, index));
   }
 
-  function addStationField(station = { instruction: "", letter: "" }, explicitIndex) {
+  function addStationField(station = { instruction: "", letter: "", encouragement: DEFAULT_ENCOURAGEMENT }, explicitIndex) {
     const list = document.querySelector("#station-list");
     const index = explicitIndex ?? list.children.length;
     const el = document.createElement("article");
@@ -115,7 +122,8 @@
     el.innerHTML = `
       <div class="row"><h3>Station <span class="station-number">${index + 1}</span></h3><button class="small-button remove-station" type="button" aria-label="Ta bort station">Ta bort</button></div>
       <label>Instruktion<textarea class="station-instruction" required placeholder="Vad ska piraterna göra?">${escapeHtml(station.instruction)}</textarea></label>
-      <label>Bokstäver till lösenordet (1–4)<input class="station-letter" required maxlength="4" value="${escapeHtml(station.letter)}" placeholder="K O" /></label>`;
+      <label>Bokstäver till lösenordet (1–4)<input class="station-letter" required maxlength="4" value="${escapeHtml(station.letter)}" placeholder="K O" /></label>
+      <label>Uppmuntran efter stationen<textarea class="station-encouragement" required>${escapeHtml(station.encouragement || DEFAULT_ENCOURAGEMENT)}</textarea></label>`;
     el.querySelector(".remove-station").addEventListener("click", () => {
       if (list.children.length === 1) return;
       el.remove();
@@ -133,15 +141,16 @@
     const build = (mapDataUrl) => {
       const stations = [...document.querySelectorAll(".station-card")].map((card) => ({
         instruction: card.querySelector(".station-instruction").value.trim(),
-        letter: normalize(card.querySelector(".station-letter").value).slice(0, 4)
+        letter: normalize(card.querySelector(".station-letter").value).slice(0, 4),
+        encouragement: card.querySelector(".station-encouragement").value.trim()
       }));
       const password = normalize(document.querySelector("#password").value);
-      if (!stations.every((station) => station.instruction && station.letter)) return alert("Fyll i instruktion och en bokstav för varje station.");
+      if (!stations.every((station) => station.instruction && station.letter && station.encouragement)) return alert("Fyll i instruktion, bokstäver och uppmuntran för varje station.");
       if (!password) return alert("Skriv lösenordet som barnen ska få fram.");
       if (normalize(stations.map((station) => station.letter).join("")) .split("").sort().join("") !== password.split("").sort().join("")) {
         return alert("Lösenordet måste innehålla exakt samma bokstäver som stationerna.");
       }
-      const resolvedMap = mapDataUrl || adventureFromStorage().mapDataUrl;
+      const resolvedMap = mapDataUrl || mapInput.dataset.mapUrl || adventureFromStorage().mapDataUrl;
       if (!resolvedMap) return alert("Lägg in en karta innan äventyret startar.");
       const adventure = {
         introMessage: document.querySelector("#intro").value.trim(),
@@ -201,11 +210,12 @@
     if (!value || typeof value !== "object" || !Array.isArray(value.stations)) throw new Error("Invalid adventure");
     const stations = value.stations.map((station) => ({
       instruction: String(station.instruction || "").trim(),
-      letter: normalize(station.letter).slice(0, 4)
+      letter: normalize(station.letter).slice(0, 4),
+      encouragement: String(station.encouragement || DEFAULT_ENCOURAGEMENT).trim()
     }));
     const password = normalize(value.password);
     const letters = stations.map((station) => station.letter).join("").split("").sort().join("");
-    if (!stations.length || !stations.every((station) => station.instruction && station.letter) || !value.mapDataUrl || letters !== password.split("").sort().join("")) throw new Error("Invalid adventure");
+    if (!stations.length || !stations.every((station) => station.instruction && station.letter && station.encouragement) || !value.mapDataUrl || letters !== password.split("").sort().join("")) throw new Error("Invalid adventure");
     return {
       introMessage: String(value.introMessage || "").trim(),
       mapDataUrl: String(value.mapDataUrl),
@@ -220,6 +230,7 @@
     adventure.stations.forEach((station, index) => {
       events.push({ type: "instruction", title: `Station ${index + 1}`, message: station.instruction });
       events.push({ type: "success", title: "Ni klarade det, pirater!", message: `Bokstaven till lösenordet är:`, letter: station.letter, map: index < adventure.stations.length - 1 });
+      events.push({ type: "encouragement", title: "Bra jobbat, pirater!", message: station.encouragement || (index === adventure.stations.length - 1 ? DEFAULT_FINAL_ENCOURAGEMENT : DEFAULT_ENCOURAGEMENT), map: true });
     });
     events.push({ type: "password", title: "Skattens lösenord", message: "Ni har hittat alla bokstäver! Placera dem i rätt ordning för att få den sista ledtråden." });
     return events;
