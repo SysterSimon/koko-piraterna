@@ -12,7 +12,7 @@ En liten, fristående mobilwebbapp för skattjakt med Apan Koko.
 
 Flödet blir: Kokos meddelande och karta → stationens instruktion → klartext med bokstav och karta → nästa station. När alla stationer är klara placerar barnen bokstavsbrickorna i rätt ordning för att få skattens sista ledtråd.
 
-Allt sparas bara i den aktuella webbläsaren på mobilen. Kartbilden lagras där också. Välj därför en rimligt liten kartbild, helst en JPEG på några megabyte eller mindre. För att ändra äventyret senare: öppna samma länk med `?setup=1` i slutet.
+Allt sparas i den aktuella webbläsaren på mobilen och finns normalt kvar efter omstart. Kartbilden lagras där också. Välj därför en rimligt liten kartbild, helst en JPEG på några megabyte eller mindre. I setupen finns även **Hämta sparad JSON** och **Ladda JSON**. JSON-filen är en fullständig lokal backup, inklusive karta, och kan laddas in på samma eller en annan mobil. För att ändra äventyret senare: öppna samma länk med `?setup=1` i slutet.
 
 ## Teknisk form
 
