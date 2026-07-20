@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = "koko-piraterna-adventure-v1";
   const app = document.querySelector("#app");
+  let sessionAdventure = null;
 
   const defaults = {
     introMessage: "Ahoy, modiga pirater! Apan Koko har försvunnit. Följ kartan och klara uppdragen för att hitta honom och skatten!",
@@ -27,12 +28,23 @@
   const normalize = (text = "") => String(text).toLocaleUpperCase("sv-SE").replace(/[^A-ZÅÄÖ]/g, "");
 
   function loadAdventure() {
+    if (sessionAdventure) return sessionAdventure;
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (!saved || !Array.isArray(saved.stations)) return null;
       return saved;
     } catch {
       return null;
+    }
+  }
+
+  function persistAdventure(adventure) {
+    sessionAdventure = adventure;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(adventure));
+      return true;
+    } catch {
+      return false;
     }
   }
 
@@ -68,6 +80,13 @@
             <label for="final-clue">Sista ledtråden när lösenordet är rätt</label>
             <textarea id="final-clue" required>${escapeHtml(adventure.finalClue)}</textarea>
           </section>
+          <section class="setup-card">
+            <h2>Spara äventyret som fil</h2>
+            <p>JSON-filen innehåller hela äventyret, även kartan. Spara den i telefonen så kan du ladda in exakt samma skattjakt senare.</p>
+            <div class="button-row"><button class="button button--secondary" type="button" id="export-adventure">Hämta sparad JSON</button><button class="button button--secondary" type="button" id="import-adventure">Ladda JSON</button></div>
+            <input id="import-file" type="file" accept="application/json,.json" hidden />
+            <p class="hint" id="import-status">Spara först setupen, hämta sedan JSON-filen som backup.</p>
+          </section>
           <div class="button-row"><button class="button" type="submit">Spara och öppna äventyret</button><button class="button button--danger" type="button" id="reset-defaults">Återställ exempel</button></div>
         </form>
       </section>`;
@@ -75,6 +94,9 @@
     renderStationFields(adventure.stations);
     document.querySelector("#add-station").addEventListener("click", () => addStationField());
     document.querySelector("#reset-defaults").addEventListener("click", () => renderSetup(structuredClone(defaults)));
+    document.querySelector("#export-adventure").addEventListener("click", exportAdventure);
+    document.querySelector("#import-adventure").addEventListener("click", () => document.querySelector("#import-file").click());
+    document.querySelector("#import-file").addEventListener("change", importAdventure);
     document.querySelector("#setup-form").addEventListener("submit", saveSetup);
   }
 
@@ -127,11 +149,8 @@
         password,
         finalClue: document.querySelector("#final-clue").value.trim()
       };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(adventure));
-      } catch {
-        return alert("Kartan är för stor för telefonens lokala lagring. Prova en mindre JPEG-bild.");
-      }
+      const persisted = persistAdventure(adventure);
+      if (!persisted) alert("Äventyret fungerar nu, men kartan är för stor för webbläsarens lokala lagring. Hämta JSON-filen från setupen för att kunna ladda den igen senare.");
       history.replaceState({}, "", location.pathname);
       renderPlay(adventure);
     };
@@ -145,6 +164,55 @@
   }
 
   function adventureFromStorage() { return loadAdventure() || defaults; }
+
+  function exportAdventure() {
+    const adventure = loadAdventure();
+    if (!adventure) return alert("Spara setupen först, sedan kan du hämta en JSON-fil.");
+    const blob = new Blob([JSON.stringify({ format: "koko-piraterna", version: 1, adventure }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "koko-pirataventyr.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importAdventure(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        const adventure = validateAdventure(parsed.adventure || parsed);
+        persistAdventure(adventure);
+        renderSetup(adventure);
+        document.querySelector("#import-status").textContent = "JSON-filen är inläst. Kontrollera uppgifterna och öppna sedan äventyret.";
+      } catch {
+        alert("Det gick inte att läsa den JSON-filen som ett Koko-äventyr.");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
+  }
+
+  function validateAdventure(value) {
+    if (!value || typeof value !== "object" || !Array.isArray(value.stations)) throw new Error("Invalid adventure");
+    const stations = value.stations.map((station) => ({
+      instruction: String(station.instruction || "").trim(),
+      letter: normalize(station.letter).slice(0, 1)
+    }));
+    const password = normalize(value.password);
+    const letters = stations.map((station) => station.letter).sort().join("");
+    if (!stations.length || !stations.every((station) => station.instruction && station.letter) || !value.mapDataUrl || letters !== password.split("").sort().join("")) throw new Error("Invalid adventure");
+    return {
+      introMessage: String(value.introMessage || "").trim(),
+      mapDataUrl: String(value.mapDataUrl),
+      stations,
+      password,
+      finalClue: String(value.finalClue || "").trim()
+    };
+  }
 
   function createEvents(adventure) {
     const events = [{ type: "intro", title: "Meddelande från Koko", message: adventure.introMessage, map: true }];
