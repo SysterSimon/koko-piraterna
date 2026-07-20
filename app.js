@@ -276,10 +276,38 @@
     let eventIndex = -1;
     let taps = 0;
     let tapWindowStartedAt = 0;
+    let longPressTimer = null;
+    let longPressTriggered = false;
     app.innerHTML = `<section class="play-screen" id="play-screen"><div class="tap-zone" aria-label="Tryck här för nästa del"></div></section>`;
     const screen = document.querySelector("#play-screen");
     const zone = screen.querySelector(".tap-zone");
+    const clearLongPress = () => {
+      if (longPressTimer) clearTimeout(longPressTimer);
+      longPressTimer = null;
+    };
+    screen.addEventListener("pointerdown", (event) => {
+      if (event.button !== undefined && event.button !== 0) return;
+      longPressTriggered = false;
+      clearLongPress();
+      longPressTimer = setTimeout(() => {
+        longPressTriggered = true;
+        taps = 0;
+        tapWindowStartedAt = 0;
+        if (eventIndex > 0) {
+          eventIndex -= 1;
+          showEvent(screen, events[eventIndex], adventure);
+        } else if (eventIndex === 0) {
+          eventIndex = -1;
+          screen.querySelector(".event")?.remove();
+        }
+      }, 3000);
+    }, true);
+    ["pointerup", "pointercancel", "pointerleave"].forEach((eventName) => screen.addEventListener(eventName, clearLongPress, true));
     zone.addEventListener("click", () => {
+      if (longPressTriggered) {
+        longPressTriggered = false;
+        return;
+      }
       if (eventIndex >= events.length - 1) return;
       const now = Date.now();
       if (!tapWindowStartedAt || now - tapWindowStartedAt > 3000) {
