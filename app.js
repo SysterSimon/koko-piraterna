@@ -229,7 +229,7 @@
     const events = [{ type: "intro", title: "Meddelande från Koko", message: adventure.introMessage, map: true }];
     adventure.stations.forEach((station, index) => {
       events.push({ type: "instruction", title: `Station ${index + 1}`, message: station.instruction });
-      events.push({ type: "success", title: "Ni klarade det, pirater!", message: `Bokstaven till lösenordet är:`, letter: station.letter, map: index < adventure.stations.length - 1 });
+      events.push({ type: "success", title: "En bokstav till lösenordet", message: `Bokstaven till lösenordet är:`, letter: station.letter, map: index < adventure.stations.length - 1 });
       events.push({ type: "encouragement", title: "Bra jobbat, pirater!", message: station.encouragement || (index === adventure.stations.length - 1 ? DEFAULT_FINAL_ENCOURAGEMENT : DEFAULT_ENCOURAGEMENT), map: true });
     });
     events.push({ type: "password", title: "Skattens lösenord", message: "Ni har hittat alla bokstäver! Placera dem i rätt ordning för att få den sista ledtråden." });
